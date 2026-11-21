@@ -5,25 +5,31 @@
 
 A plugin for [CloudeMap](https://github.com/hailtohell/CloudeMap) that shows
 [Shortest Path Forever](https://github.com/cjber/shortest-path-forever) on CloudeMap's map.
-Both addons are required.
+Both addons are required, and CloudeMap must be newer than 0.19.9 (the version that brought its
+plugin interface).
 
 ## Features
 
 - **Your journey:** the walk you're on follows Shortest Path's arrow; later legs (flights, boats,
   zeppelins, portals) in Shortest Path's colours, the walk in the route colour you picked there.
 - **Destination pin:** its tooltip lists each step with its time and the time left.
-- **Shift+click on CloudeMap** plans a journey to that spot.
-- **Transports:** boats, zeppelins, lifts, the Deeprun Tram and portals as pins; hover a dock to see
-  where it goes and its route. The other faction's routes and portals follow Shortest Path's own
-  settings.
+- **Shift+click on CloudeMap** plans a journey to that spot. If Shortest Path can't plan it, the
+  chat says why (in combat, journeys turned off in its settings, and so on).
+- **Transports:** boats, zeppelins, lifts, the Deeprun Tram and portals as pins, on every map and
+  at every zoom. Hover a dock to see where it goes, its route, and when it next leaves once
+  Shortest Path has seen that ship. The other faction's routes and portals follow Shortest Path's
+  own settings.
+- **Seamless sea lanes:** boat and zeppelin routes are drawn round the land, also across the sea
+  between Kalimdor and the Eastern Kingdoms, never through a continent.
 - Each part has its own toggle in CloudeMap's Pins list, under Other addons.
-
-No departure times: Shortest Path works them out from its own sightings, which it keeps private.
 
 ## Credits
 
-Transport data copied from Shortest Path Forever by cjber (GPL-3.0-or-later), which builds it from
-wago.tools DB2 and CMaNGOS classic-db.
+From Shortest Path Forever by cjber (GPL-3.0-or-later):
+
+- the transport data, which it builds from wago.tools DB2 and CMaNGOS classic-db;
+- the sea lanes, routed on its walking grid;
+- half of the icon: CloudeMap's icon and Shortest Path's, split diagonally.
 
 ## License
 

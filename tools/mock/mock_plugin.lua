@@ -289,7 +289,7 @@ assert(ev, "event frame not found")
 ev.scripts.OnEvent(ev, "ADDON_LOADED", "CloudeMap")
 ev.scripts.OnEvent(ev, "PLAYER_LOGIN")
 PNS = {}
-for _, n in ipairs({ "Transit.lua", "ShortestPath.lua" }) do local f = assert(loadfile((os.getenv("PLUGIN_DIR") or (dir .. "/../CloudeMap_ShortestPath")) .. "/" .. n)); f("CloudeMap_ShortestPath", PNS) end
+for _, n in ipairs({ "Transit.lua", "Lanes.lua", "ShortestPath.lua" }) do local f = assert(loadfile((os.getenv("PLUGIN_DIR") or (dir .. "/../CloudeMap_ShortestPath")) .. "/" .. n)); f("CloudeMap_ShortestPath", PNS) end
 
 local view
 for _, f in ipairs(allFrames) do if f.scripts.OnUpdate and f.scripts.OnMouseWheel then view = f end end

@@ -121,22 +121,50 @@ end
 ---------------------------------------------------------------------------
 local BRIDGE_STEPS = 24
 
--- the route's points on the canvas (nil where the game cannot place one), worked out once
+-- a route's sea lanes (Lanes.lua, by route ID): drawn round the land at its jumps
+local laneOf
+local function Lanes(r)
+    if not laneOf then
+        laneOf = {}
+        for id, route in pairs(ns.TRANSIT.routes) do laneOf[route] = ns.LANES and ns.LANES[id] or false end
+    end
+    return laneOf[r] or nil
+end
+
+-- the route's points on the canvas (nil where the game cannot place one), worked out once. A lane
+-- { from, to, continent, x, y, ... } is drawn after path point from and takes the place of the
+-- points between from and to (going round), the stretch where the ship heads away from it.
 local function RoutePoints(r)
     if r.cv then return r.cv end
-    local M, pts, cv = Map(), r[5], {}
-    for i = 1, #pts, 4 do
-        local x, y = M.WorldToCanvas(pts[i], pts[i + 1], pts[i + 2])
-        cv[#cv + 1] = { x = x, y = y, c = pts[i], t = pts[i + 3] }
+    local M, pts, cv, lanes = Map(), r[5], {}, Lanes(r)
+    local n, skip, after = #pts / 4, {}, {}
+    for _, lane in ipairs(lanes or {}) do
+        after[lane[1]] = lane
+        local k = lane[1] % n + 1
+        while k ~= lane[2] do skip[k], k = true, k % n + 1 end
+    end
+    for k = 1, n do
+        if not skip[k] then
+            local i = k * 4 - 3
+            local x, y = M.WorldToCanvas(pts[i], pts[i + 1], pts[i + 2])
+            cv[#cv + 1] = { x = x, y = y, c = pts[i], t = pts[i + 3] }
+            local lane = after[k]
+            for q = 3, lane and #lane or 0, 3 do
+                local lx, ly = M.WorldToCanvas(lane[q], lane[q + 1], lane[q + 2])
+                cv[#cv + 1] = { x = lx, y = ly, c = lane[q], lane = true }
+            end
+        end
     end
     r.cv = cv
     return cv
 end
 
--- a cubic curve from a to b, leaving a along (a - before) and reaching b along (after - b)
+-- a cubic curve from a to b, leaving a along (a - before) and reaching b along (after - b); across
+-- the strait between two lanes the pull is the strait's width only, so the curve stays over the sea
 local function Bridge(poly, before, a, b, after)
     local dx, dy = b.x - a.x, b.y - a.y
     local len = math.sqrt(dx * dx + dy * dy)
+    if len == 0 then return end
     local function Dir(p, q)
         if not (p and q and p.x and q.x) then return dx / len, dy / len end
         local ux, uy = q.x - p.x, q.y - p.y
@@ -146,7 +174,7 @@ local function Bridge(poly, before, a, b, after)
     end
     local ax, ay = Dir(before, a)
     local bx, by = Dir(b, after)
-    local k = len * 0.35
+    local k = (a.lane and b.lane) and math.abs(dx) * 0.35 or len * 0.35
     local p1x, p1y = a.x + ax * k, a.y + ay * k
     local p2x, p2y = b.x - bx * k, b.y - by * k
     for i = 1, BRIDGE_STEPS do
@@ -298,6 +326,18 @@ local function Read()
     Draw()
 end
 
+-- Navigate answers a bare false; its gates (Core/API.lua NavigateRoute) are read back here to say which one
+local function Refusal(map, x, y)
+    if InCombatLockdown() then return "in combat" end
+    if SPDB().journey == false then return "Journeys are turned off in Shortest Path's settings" end
+    local px, py = UnitPosition("player")
+    local open = rawget(_G, "canaccessvalue")
+    if open and not (open(px) and open(py)) or not (px and py) then return "no player position here" end
+    local ok, continent = pcall(C_Map.GetWorldPosFromMapPos, map, CreateVector2D(x, y))
+    if not (ok and continent) then return ("map %d at %.3f, %.3f has no world position"):format(map, x, y) end
+    return "refused"
+end
+
 -- Shift+click on CloudeMap: a journey there
 local function Click(btn, cx, cy, shift, ctrl, alt)
     if btn ~= "LeftButton" or not shift or ctrl or alt then return end
@@ -306,8 +346,9 @@ local function Click(btn, cx, cy, shift, ctrl, alt)
     local map, x, y = M.MapAt(cx, cy)
     if not map then return end
     local ok, started, why = pcall(api.Navigate, OWNER, map, x, y)
+    if ok and started == false and not why then why = Refusal(map, x, y) end
     s.last = ("map %d %.3f %.3f: %s"):format(map, x, y,
-        ok and (tostring(started) .. (why and (" " .. tostring(why)) or "")) or ("error " .. tostring(started)))
+        ok and (tostring(started) .. (why and (" (" .. tostring(why) .. ")") or "")) or ("error " .. tostring(started)))
     if not ok or started == false or (started == nil and why) then
         local reason = not ok and tostring(started) or why or "refused"
         print(("|cff66ccffCloudeMap:|r Shortest Path couldn't plan that journey (map %d, %s)"):format(map, reason))
@@ -667,9 +708,9 @@ local function Hook()
     cm.RegisterCategory(CAT, { name = "Shortest Path: journey", addon = "ShortestPathForever", order = 430, minScale = 0,
         size = 26, minSize = MIN_PIN, always = true, texture = "Interface\\AddOns\\ShortestPathForever\\media\\Pin" })
     cm.RegisterCategory(CAT .. "docks", { name = "Shortest Path: boats, zeppelins, lifts, tram", addon = "ShortestPathForever",
-        order = 431, minScale = 0, size = 20, minSize = MIN_PIN })
+        order = 431, minScale = 0, size = 20, minSize = MIN_PIN, always = true })
     cm.RegisterCategory(CAT .. "portals", { name = "Shortest Path: portals", addon = "ShortestPathForever",
-        order = 432, minScale = 0, size = 20, minSize = MIN_PIN })
+        order = 432, minScale = 0, size = 20, minSize = MIN_PIN, always = true })
     M.OnRedraw(Redraw)
     M.OnClick(Click)
     M.OnToggle(function(id) if id == CAT then Read() end end)

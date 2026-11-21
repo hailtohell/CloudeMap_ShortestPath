@@ -1,10 +1,11 @@
 ## Interface: 16001
 ## Title: CloudeMap: Shortest Path
 ## Notes: Shows Shortest Path Forever on CloudeMap: your journey, its destination, Shift+click to plan, boats, zeppelins, lifts, the tram and portals.
-## Version: 0.1.0-2
+## Version: 0.1.0
 ## Category: Map
 ## Dependencies: CloudeMap, ShortestPathForever
-## IconTexture: Interface\AddOns\CloudeMap\Gfx\CloudeMap
+## IconTexture: Interface\AddOns\CloudeMap_ShortestPath\Gfx\Icon
 
 Transit.lua
+Lanes.lua
 ShortestPath.lua
