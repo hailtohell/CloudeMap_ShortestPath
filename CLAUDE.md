@@ -1,0 +1,89 @@
+# CloudeMap_ShortestPath — notes for Claude
+
+A WoW Forever addon (Interface 16001, the Midnight client) that shows Shortest Path Forever on
+CloudeMap's seamless world map. Owner: Andy (GitHub `hailtohell`). CloudeMap itself lives in
+`hailtohell/CloudeMap`. The plugin was split out of CloudeMap so the map's core stays free of it.
+
+## Working rules (Andy's, keep them)
+
+- **Self-contained:** never touch other addons' or Blizzard's frames or functions: no hooks,
+  no replacing functions, no reparenting, no SetFrameLevel on foreign frames. Read public APIs and
+  SavedVariables only. This is the most important rule.
+- **No extra runners:** no permanent OnUpdate or tickers. Work on events and callbacks; a frame
+  that runs only while something is hovered is fine.
+- **Build only on "build it"** (or "test build"). Otherwise only change the working files.
+- **Versions:** the number goes up only when Andy says push or ship. Test builds add `-N`
+  (`0.1.0-1`, `0.1.0-2`, …). On push: last number if `/reload` is enough, middle number if a full
+  game restart is needed (new files in the TOC, new SavedVariables, new addon).
+- **"Ship it"** = push plus a release build zip plus a changelog for Andy to paste on sites.
+- **README:** update it only when pushing or shipping, not for test builds; keep it in line with
+  the features.
+- **Push only to `main`**, commit as `hailtohell` / `hailtohell@users.noreply.github.com` (never
+  Andy's real email). Andy makes the GitHub releases himself.
+- **Replies:** don't recap earlier points.
+- Copy-paste text for CurseForge or other sites goes in plain rendered Markdown, not in a code box.
+
+## How it works
+
+- `ShortestPath.lua`: all logic. `Transit.lua`: generated data (don't edit by hand).
+- **Journey:** read through `ShortestPathForever.API` (Journey, Guidance, Subscribe, Navigate,
+  Cancel). The current walk follows Guidance's waypoints. Boat and zeppelin legs follow the ship's
+  recorded path (`LegPath`: the route and stop pair nearest the leg's ends). Other legs are drawn
+  straight. The goal pin's tooltip is like Shortest Path's StopPin goal: title plus time left,
+  the steps (current in white), and "Right-click to clear" (only for journeys owned by
+  `"CloudeMap"`; the API only lets the owner cancel).
+- **Shift+click** on CloudeMap calls `API.Navigate("CloudeMap", map, x, y)`.
+- **Transports:** Shortest Path's docks, routes and portals are private (its addon namespace), so
+  they are copied into `Transit.lua` by `tools/gen_transit.py`. Tooltips copy Shortest Path's
+  `UI/Map.lua` wording. Departure times come from Shortest Path's saved sightings
+  (`ShortestPathForeverDB.anchors[routeID] = { epoch = serverMs, seen = serverSec }`) with its
+  timetable maths (`Visit`, as in `Transport/Model.lua`). Filters follow its settings: `pins`
+  (boats/zeppelins), `transit` (lifts/tram), `portals`, `otherFaction`, `journeyHint`.
+- **Seamless ship paths:** the recorded paths jump between continents at loading screens. The
+  jump is bridged with a cubic curve that follows the ship's heading at both ends (`Bridge`). The
+  tram runs in instance 369, which has no map position, so it's a straight line between stations.
+- Pins never shrink below `MIN_PIN` (16, half the player arrow) via the category's `minSize`.
+- Drawn lines are CloudeMap-style `CreateLine` pairs (dark outline plus colour) on the plugin's
+  own frame at the pins' level, anchored to CloudeMap's pin layer. They are redrawn on zoom; pans
+  move with the layer for free.
+
+## CloudeMap's plugin interface (`CloudeMap.Map`, version 1, in CloudeMap's Bridge.lua)
+
+`View()` → view, layer, scale, level · `ToCanvas(uiMapID, x, y)` → cx, cy, map, x, y ·
+`WorldToCanvas(continent, wx, wy)` · `MapAt(cx, cy)` → uiMapID, x, y · `Hero()` ·
+`OnRedraw(fn(scale))` · `OnClick(fn(btn, cx, cy, shift, ctrl, alt) → handled)` ·
+`OnToggle(fn(id, on))` · `Status(fn → string)` for `/cmap status`.
+Pins go through `CloudeMap.RegisterCategory` / `SetPins` (category fields include `minSize`,
+`always`, `absolute`; pin fields include `onEnter(frame, pin)`, `onLeave`, `onClick(pin, btn)`,
+`atlas`, `texture`, `size`). A view point is `ox + cx*scale, oy + cy*scale`, y down.
+
+**This interface first exists in CloudeMap after 0.19.9** (test build 0.19.9-3). Until CloudeMap
+ships it, the plugin needs that test build.
+
+## Lua limits (WoW is Lua 5.1)
+
+At most 200 locals in a chunk and 60 upvalues per function. `and`/`or` truncate multiple returns
+(`local a, b = x and F()` gives only one value): assign explicitly. Guard secret values (Midnight)
+with `issecretvalue`.
+
+## Tools
+
+- `tools/gen_transit.py` (needs `pip install lupa`): run from inside an unpacked Shortest Path
+  Forever folder: `python3 -I gen_transit.py . ../path/to/Transit.lua 1.43.10`, with the
+  version it was taken from.
+- `tools/mock/`: a Lua mock of the game. Needs CloudeMap's folder:
+  `PLUGIN_DIR=<this repo> python3 -I tools/mock/run_mock.py <CloudeMap folder> xy tools/mock/mock_plugin.lua`.
+  It prints the journey, dock tooltips, ship legs, the pin minimum size and `/cmap status`; any
+  `LUA ERROR` line is a failure. Position lookups are stand-ins, so shapes need checking in game.
+
+## Open items
+
+- **Shift+click error:** the first test showed "Shortest Path couldn't plan that journey (error)".
+  The plugin now prints the real error text and `/cmap status` shows the last attempt. Get that
+  message from Andy and fix the cause.
+- **Not yet checked in game:** places in caves/micro maps landing right, long walks zoomed out,
+  ship curve shapes, live departure countdowns, Shift+click on a Questie pin also starting a
+  journey.
+- **Ask Andy:** should "Other addons" in CloudeMap's Pins list open on click like Pings? (CloudeMap's
+  side.)
+- Not released yet: version 0.1.0, no README credit changes needed beyond what's there.
