@@ -1,7 +1,8 @@
 # CloudeMap: Shortest Path
 
-> **AI disclaimer:** written with an AI assistant (Claude, by Anthropic), directed, tested and
-> reviewed in game by a human.
+> **AI disclaimer:** this plugin's code, its icon and this README were written with an AI
+> assistant (Claude, by Anthropic), directed, tested and reviewed in game by a human. Expect the
+> occasional rough edge; use it at your own risk.
 
 A plugin for [CloudeMap](https://github.com/hailtohell/CloudeMap) that shows
 [Shortest Path Forever](https://github.com/cjber/shortest-path-forever) on CloudeMap's map.

@@ -78,12 +78,13 @@ with `issecretvalue`.
 ## Tools
 
 - `tools/gen_transit.py` (needs `pip install lupa`): run from inside an unpacked Shortest Path
-  Forever folder: `python3 -I gen_transit.py . ../path/to/Transit.lua 1.43.10`, with the
+  Forever folder: `python3 -I gen_transit.py . ../path/to/Transit.lua 1.45.8`, with the
   version it was taken from.
 - `tools/gen_lanes.py` (needs `pip install lupa numpy scikit-image`, pillow for a preview): run
   from inside an unpacked Shortest Path Forever folder:
   `python3 -I gen_lanes.py . ../path/to/Transit.lua ../path/to/Lanes.lua 1.43.11 [preview-dir]`.
   Rerun it whenever `Transit.lua` is regenerated (lanes are keyed by route ID and path point index).
+  It reads nav grid formats 1–4 (4 came with Shortest Path's 1.60 bake: a palette of value*256+moves).
   It prints `land crossings: N`, which must be 0; the preview draws each continent's land mask, lanes
   in green and the strait's edge in magenta.
 - `tools/mock/`: a Lua mock of the game. Needs CloudeMap's folder:
@@ -104,4 +105,5 @@ with `issecretvalue`.
   journey.
 - **Ask Andy:** should "Other addons" in CloudeMap's Pins list open on click like Pings? (CloudeMap's
   side.)
-- **Released:** 0.1.0 (first release; the plugin needs CloudeMap after 0.19.9 for `CloudeMap.Map`).
+- **Released:** 0.1.1 (`Transit.lua` from Shortest Path 1.45.8; checked compatible with it: API 2.7,
+  Navigate's gates, timetable maths, settings and media unchanged). Needs CloudeMap after 0.19.9.

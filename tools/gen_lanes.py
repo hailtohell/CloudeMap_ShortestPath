@@ -62,13 +62,28 @@ def mask(cont):
             continue
         raw = b"".join(zlib.decompress(base64.b64decode(blocks[i + 1])) for i in range(len(blocks))).decode()
         vals, v = [], 0
-        for ch in raw:
-            s = B64[ch]
-            if s < 48:
-                v = s // 16
+        if (D.format or 1) >= 4:
+            # format 4: a palette of value * 256 + moves, then palette indices, 47 = literal, >= 48 repeats
+            count = B64[raw[0]]
+            pal = [B64[raw[1 + 2 * e]] * 64 + B64[raw[2 + 2 * e]] for e in range(count)]
+            i = 1 + 2 * count
+            while i < len(raw):
+                s = B64[raw[i]]; i += 1
+                if s >= 48:
+                    vals.extend([v] * (s - 47))
+                    continue
+                code = pal[s] if s != 47 else B64[raw[i]] * 64 + B64[raw[i + 1]]
+                i += 2 if s == 47 else 0
+                v = code // 256
                 vals.append(v)
-            else:
-                vals.extend([v] * (s - 47))
+        else:
+            for ch in raw:
+                s = B64[ch]
+                if s < 48:
+                    v = s // 16
+                    vals.append(v)
+                else:
+                    vals.extend([v] * (s - 47))
         a = np.array(vals[: C * C]).reshape(C, C)          # [cell along x, cell along y]
         bx, by = (cx0 + k // ny) * T, (cy0 + k % ny) * T
         ix = ((bx + (np.arange(C) + 0.5) * cs - x0) / R).astype(int)
