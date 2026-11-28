@@ -21,22 +21,20 @@ CloudeMap's seamless world map. Owner: Andy (GitHub `hailtohell`). CloudeMap its
 - **Push only to `main`**, commit as `hailtohell` / `hailtohell@users.noreply.github.com` (never
   Andy's real email). Andy makes the GitHub releases himself.
 - **Replies:** don't recap earlier points.
-- Copy-paste text for CurseForge or other sites goes in plain rendered Markdown, not in a code box.
+- The ship changelog (for GitHub and CurseForge) is raw Markdown in a code box, for that one version
+  only: a `## x.y.z (date)` heading and its bullets, no `# Changelog` title, no older versions.
 
 ## How it works
 
 - `ShortestPath.lua`: all logic. `Transit.lua`: generated data (don't edit by hand).
-- **Journey:** read through `ShortestPathForever.API` (Journey, Guidance, Subscribe, Navigate,
-  Cancel). The current walk follows Guidance's waypoints. Boat and zeppelin legs follow the ship's
+- **Journey:** read through `ShortestPathForever.API` (Journey, Guidance, Subscribe). The current walk follows Guidance's waypoints. Boat and zeppelin legs follow the ship's
   recorded path (`LegPath`: the route and stop pair nearest the leg's ends). Other legs are drawn
-  straight. The goal pin's tooltip is like Shortest Path's StopPin goal: title plus time left,
-  the steps (current in white), and "Right-click to clear" (only for journeys owned by
-  `"CloudeMap"`; the API only lets the owner cancel).
-- **Shift+click** on CloudeMap calls `API.Navigate("CloudeMap", map, x, y)` (`StartJourney`). Shortest
-  Path refuses other addons in a fight, so in a fight the click goes to CloudeMap's
-  `Map.AfterFight(fn, "journey")` (newest click wins, runs when the fight ends; "journey queued until
-  the fight ends" in chat). With a CloudeMap lacking `AfterFight`, or journeys turned off, it says why
-  at once as before.
+  straight. The goal pin's tooltip is like Shortest Path's StopPin goal: title plus time left and
+  the steps (current in white).
+- **No Shift+click of our own** (removed after 0.1.2): CloudeMap's Ctrl+right-click places the game's
+  map pin, and Shortest Path (1.48+, setting "Route to your map pin", on by default) starts a journey
+  to it by itself, also holding it through a fight. So the plugin never calls `Navigate`/`Cancel`:
+  no click handler, no fight queue, no "Shift-click to plan" tooltip hint, no right-click to clear.
 - **Transports:** Shortest Path's docks, routes and portals are private (its addon namespace), so
   they are copied into `Transit.lua` by `tools/gen_transit.py`. Tooltips copy Shortest Path's
   `UI/Map.lua` wording. Departure times come from Shortest Path's saved sightings
@@ -101,17 +99,12 @@ with `issecretvalue`.
 
 ## Open items
 
-- **Shift+click refused:** 0.1.0-2 showed `map 1424 0.545 0.416: false`. Navigate gives a bare
-  false only when you're in combat, `ShortestPathForeverDB.journey` is off, there's no player position, or
-  `C_Map.GetWorldPosFromMapPos` fails. `Refusal` now names which one; get it from Andy. If it
-  says "refused", none of those gates matched and his Shortest Path version differs from `main`.
 - The mock needs CloudeMap's 0.19.9-3 files; the public 0.19.9 lacks `CloudeMap.Map`, so the mock
   stops at `field 'spf'`.
 - **Not yet checked in game:** the sea lanes on CloudeMap's real canvas (checked only on an
-  approximate one), places in caves/micro maps landing right, long walks zoomed out, live departure countdowns, Shift+click on a Questie pin also starting a
-  journey.
+  approximate one), places in caves/micro maps landing right, long walks zoomed out, live departure countdowns.
 - **Ask Andy:** should "Other addons" in CloudeMap's Pins list open on click like Pings? (CloudeMap's
   side.)
-- **Released:** 0.1.2 (queued Shift+click in a fight; `Transit.lua` from Shortest Path 1.45.8, identical
-  to 1.50.1's; checked compatible with 1.50.1). Needs CloudeMap after 0.19.9; the queue needs a
-  CloudeMap with `Map.AfterFight`.
+- **Released:** 0.1.3 (Shift+click removed, journeys come from the map pin; `Transit.lua` from
+  Shortest Path 1.45.8, identical to 1.50.1's; checked compatible with 1.50.1). Needs CloudeMap after
+  0.19.9.

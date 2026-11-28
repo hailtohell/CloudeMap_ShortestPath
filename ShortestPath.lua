@@ -1,20 +1,20 @@
 -- CloudeMap_ShortestPath: Shortest Path Forever on CloudeMap's map.
 --
 -- The journey is read through Shortest Path's public API (ShortestPathForever.API: Journey,
--- Guidance, Subscribe, Navigate) and drawn through CloudeMap's (CloudeMap.Map and the pin
+-- Guidance, Subscribe) and drawn through CloudeMap's (CloudeMap.Map and the pin
 -- registry); neither addon's frames or functions are touched. The transports come from a copy of
 -- Shortest Path's data (Transit.lua), since its own tables are private.
 --
 --   the walk under way follows the arrow's own path; later legs run straight from end to end in
 --   Shortest Path's colours, the destination gets its pin (tooltip: the steps and their times)
---   Shift+click on CloudeMap plans a journey there, as on the game's map
+--   a journey to a spot: CloudeMap's map pin (Ctrl+right-click), which Shortest Path routes to itself
 --   docks (boats, zeppelins, lifts, the tram) and portals as pins; hovering a dock shows its route
 --
 -- Read when the journey changes (Shortest Path's Subscribe), drawn again when the map zooms or
 -- changes zone: no timer of its own.
 local _, ns = ...
 
-local OWNER, CAT = "CloudeMap", "spf"
+local CAT = "spf"
 local s = { polys = {}, hover = {}, lines = {}, shown = 0 }
 ns.state = s
 
@@ -263,7 +263,7 @@ end
 ---------------------------------------------------------------------------
 -- The journey
 ---------------------------------------------------------------------------
-local GoalEnter, GoalLeave, GoalClick        -- (the goal pin's tooltip and click, further down)
+local GoalEnter, GoalLeave                   -- (the goal pin's tooltip, further down)
 
 local function Clear()
     if #s.polys > 0 or s.goalKey then
@@ -320,54 +320,10 @@ local function Read()
         s.goalKey = key
         local left = tonumber(j.secondsLeft)
         cm.SetPins(CAT, gm and { { map = gm, x = gx, y = gy, steps = steps, left = left and left > 0 and Time(left) or nil,
-            mine = j.owner == OWNER, name = type(j.goal.title) == "string" and j.goal.title or "Destination",
-            onEnter = GoalEnter, onLeave = GoalLeave, onClick = GoalClick } } or {})
+            name = type(j.goal.title) == "string" and j.goal.title or "Destination",
+            onEnter = GoalEnter, onLeave = GoalLeave } } or {})
     end
     Draw()
-end
-
--- Navigate answers a bare false; its gates (Core/API.lua NavigateRoute) are read back here to say which one
-local function Refusal(map, x, y)
-    if SPDB().journey == false then return "Journeys are turned off in Shortest Path's settings" end
-    if InCombatLockdown() then return "in combat" end
-    local px, py = UnitPosition("player")
-    local open = rawget(_G, "canaccessvalue")
-    if open and not (open(px) and open(py)) or not (px and py) then return "no player position here" end
-    local ok, continent = pcall(C_Map.GetWorldPosFromMapPos, map, CreateVector2D(x, y))
-    if not (ok and continent) then return ("map %d at %.3f, %.3f has no world position"):format(map, x, y) end
-    return "refused"
-end
-
--- asks Shortest Path for a journey to map x, y and says in the chat when it can't plan one
-local function StartJourney(map, x, y)
-    local api = API()
-    if not (api and type(api.Navigate) == "function") then return end
-    local ok, started, why = pcall(api.Navigate, OWNER, map, x, y)
-    if ok and started == false and not why then why = Refusal(map, x, y) end
-    s.last = ("map %d %.3f %.3f: %s"):format(map, x, y,
-        ok and (tostring(started) .. (why and (" (" .. tostring(why) .. ")") or "")) or ("error " .. tostring(started)))
-    if not ok or started == false or (started == nil and why) then
-        local reason = not ok and tostring(started) or why or "refused"
-        print(("|cff66ccffCloudeMap:|r Shortest Path couldn't plan that journey (map %d, %s)"):format(map, reason))
-    end
-end
-
--- Shift+click on CloudeMap: a journey there. In a fight Shortest Path refuses other addons, so the
--- click is held by CloudeMap (Map.AfterFight, where it has it) and the newest one runs when the fight ends.
-local function Click(btn, cx, cy, shift, ctrl, alt)
-    if btn ~= "LeftButton" or not shift or ctrl or alt then return end
-    local api, M = API(), Map()
-    if not (api and type(api.Navigate) == "function" and M) then return end
-    local map, x, y = M.MapAt(cx, cy)
-    if not map then return end
-    if InCombatLockdown() and type(M.AfterFight) == "function" and SPDB().journey ~= false then
-        M.AfterFight(function() StartJourney(map, x, y) end, "journey")
-        s.last = ("map %d %.3f %.3f: held for the fight's end"):format(map, x, y)
-        print("|cff66ccffCloudeMap:|r journey queued until the fight ends")
-        return true
-    end
-    StartJourney(map, x, y)
-    return true
 end
 
 ---------------------------------------------------------------------------
@@ -380,31 +336,16 @@ local function Title(text, right)
     else GameTooltip:AddLine(text, 1, 1, 1) end
 end
 local function TipLine(text, c) GameTooltip:AddLine(text, (c or GOLD)[1], (c or GOLD)[2], (c or GOLD)[3], true) end
-local function Instruction(text) GameTooltip:AddLine(text, 0.1, 1, 0.1, true) end
--- "Shift-click to plan a journey here", while Shortest Path's own hint setting is on
-local function JourneyHint()
-    local db = SPDB()
-    if db.journey ~= false and db.journeyHint ~= false then Instruction("Shift-click to plan a journey here") end
-end
-
--- the goal pin: its title and the time left, the steps when there is more than one, how to clear it
+-- the goal pin: its title and the time left, the steps when there is more than one
 function GoalEnter(frame, pin)
     GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
     Title(pin.name, pin.left)
     if #pin.steps > 1 then
         for i, step in ipairs(pin.steps) do TipLine(step, i == 1 and WHITE or GOLD) end
     end
-    if pin.mine then
-        GameTooltip:AddLine(" ")
-        TipLine("Right-click to clear")
-    end
     GameTooltip:Show()
 end
 function GoalLeave() GameTooltip:Hide() end
-function GoalClick(pin, btn)
-    local api = API()
-    if btn == "RightButton" and pin.mine and api and api.Cancel then pcall(api.Cancel, OWNER) end
-end
 
 ---------------------------------------------------------------------------
 -- Transports, from the copy of Shortest Path's data: a pin per dock (landings too close to tell
@@ -583,7 +524,6 @@ local function DockTooltip(pin)
         local ago = SecondsToTime and SecondsToTime(math.max(freshest.seen, 60), true, false, 1) or (math.floor(freshest.seen / 60) .. " min")
         TipLine(("Last seen %s ago"):format(ago), GREY)
     end
-    JourneyHint()
 end
 
 -- the route under a hovered dock, and its countdowns ticking (a frame of this plugin's own that
@@ -640,7 +580,6 @@ local function PortalEnter(frame, pin)
     GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
     Title(pin.name)
     TipLine(("to %s"):format(pin.to))
-    JourneyHint()
     GameTooltip:Show()
 end
 
@@ -726,11 +665,10 @@ local function Hook()
     cm.RegisterCategory(CAT .. "portals", { name = "Shortest Path: portals", addon = "ShortestPathForever",
         order = 432, minScale = 0, size = 20, minSize = MIN_PIN, always = true })
     M.OnRedraw(Redraw)
-    M.OnClick(Click)
     M.OnToggle(function(id) if id == CAT then Read() end end)
     M.Status(function()
-        return ("Shortest Path: %d lines, transports %s, last shift+click %s"):format(s.shown or 0,
-            t.built and "shown" or "not built yet", tostring(s.last or "none"))
+        return ("Shortest Path: %d lines, transports %s"):format(s.shown or 0,
+            t.built and "shown" or "not built yet")
     end)
     s.hooked = pcall(api.Subscribe, function()
         if M.View() then Read() else s.dirty = true end

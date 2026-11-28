@@ -592,7 +592,7 @@ do
     IsControlKeyDown = function() return false end
     curX, curY = 300, 300
     view.scripts.OnMouseDown(view, "LeftButton"); view.scripts.OnMouseUp(view, "LeftButton")
-    out[#out+1] = "shift click navigated: " .. tostring(navigated)
+    out[#out+1] = "shift click navigated (must be nil, the map pin does it): " .. tostring(navigated)
     IsShiftKeyDown = function() return false end
     UnitFactionGroup = function() return "Horde" end
     CreateVector2D = function(x, y) return { x = x, y = y } end
