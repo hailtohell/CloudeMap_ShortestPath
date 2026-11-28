@@ -328,8 +328,8 @@ end
 
 -- Navigate answers a bare false; its gates (Core/API.lua NavigateRoute) are read back here to say which one
 local function Refusal(map, x, y)
-    if InCombatLockdown() then return "in combat" end
     if SPDB().journey == false then return "Journeys are turned off in Shortest Path's settings" end
+    if InCombatLockdown() then return "in combat" end
     local px, py = UnitPosition("player")
     local open = rawget(_G, "canaccessvalue")
     if open and not (open(px) and open(py)) or not (px and py) then return "no player position here" end
@@ -338,13 +338,10 @@ local function Refusal(map, x, y)
     return "refused"
 end
 
--- Shift+click on CloudeMap: a journey there
-local function Click(btn, cx, cy, shift, ctrl, alt)
-    if btn ~= "LeftButton" or not shift or ctrl or alt then return end
-    local api, M = API(), Map()
-    if not (api and type(api.Navigate) == "function" and M) then return end
-    local map, x, y = M.MapAt(cx, cy)
-    if not map then return end
+-- asks Shortest Path for a journey to map x, y and says in the chat when it can't plan one
+local function StartJourney(map, x, y)
+    local api = API()
+    if not (api and type(api.Navigate) == "function") then return end
     local ok, started, why = pcall(api.Navigate, OWNER, map, x, y)
     if ok and started == false and not why then why = Refusal(map, x, y) end
     s.last = ("map %d %.3f %.3f: %s"):format(map, x, y,
@@ -353,6 +350,23 @@ local function Click(btn, cx, cy, shift, ctrl, alt)
         local reason = not ok and tostring(started) or why or "refused"
         print(("|cff66ccffCloudeMap:|r Shortest Path couldn't plan that journey (map %d, %s)"):format(map, reason))
     end
+end
+
+-- Shift+click on CloudeMap: a journey there. In a fight Shortest Path refuses other addons, so the
+-- click is held by CloudeMap (Map.AfterFight, where it has it) and the newest one runs when the fight ends.
+local function Click(btn, cx, cy, shift, ctrl, alt)
+    if btn ~= "LeftButton" or not shift or ctrl or alt then return end
+    local api, M = API(), Map()
+    if not (api and type(api.Navigate) == "function" and M) then return end
+    local map, x, y = M.MapAt(cx, cy)
+    if not map then return end
+    if InCombatLockdown() and type(M.AfterFight) == "function" and SPDB().journey ~= false then
+        M.AfterFight(function() StartJourney(map, x, y) end, "journey")
+        s.last = ("map %d %.3f %.3f: held for the fight's end"):format(map, x, y)
+        print("|cff66ccffCloudeMap:|r journey queued until the fight ends")
+        return true
+    end
+    StartJourney(map, x, y)
     return true
 end
 

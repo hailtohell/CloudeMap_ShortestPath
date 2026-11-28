@@ -32,7 +32,11 @@ CloudeMap's seamless world map. Owner: Andy (GitHub `hailtohell`). CloudeMap its
   straight. The goal pin's tooltip is like Shortest Path's StopPin goal: title plus time left,
   the steps (current in white), and "Right-click to clear" (only for journeys owned by
   `"CloudeMap"`; the API only lets the owner cancel).
-- **Shift+click** on CloudeMap calls `API.Navigate("CloudeMap", map, x, y)`.
+- **Shift+click** on CloudeMap calls `API.Navigate("CloudeMap", map, x, y)` (`StartJourney`). Shortest
+  Path refuses other addons in a fight, so in a fight the click goes to CloudeMap's
+  `Map.AfterFight(fn, "journey")` (newest click wins, runs when the fight ends; "journey queued until
+  the fight ends" in chat). With a CloudeMap lacking `AfterFight`, or journeys turned off, it says why
+  at once as before.
 - **Transports:** Shortest Path's docks, routes and portals are private (its addon namespace), so
   they are copied into `Transit.lua` by `tools/gen_transit.py`. Tooltips copy Shortest Path's
   `UI/Map.lua` wording. Departure times come from Shortest Path's saved sightings
@@ -61,7 +65,10 @@ CloudeMap's seamless world map. Owner: Andy (GitHub `hailtohell`). CloudeMap its
 `View()` → view, layer, scale, level · `ToCanvas(uiMapID, x, y)` → cx, cy, map, x, y ·
 `WorldToCanvas(continent, wx, wy)` · `MapAt(cx, cy)` → uiMapID, x, y · `Hero()` ·
 `OnRedraw(fn(scale))` · `OnClick(fn(btn, cx, cy, shift, ctrl, alt) → handled)` ·
-`OnToggle(fn(id, on))` · `Status(fn → string)` for `/cmap status`.
+`OnToggle(fn(id, on))` · `Status(fn → string)` for `/cmap status` · `AfterFight(fn, key)` (runs fn now
+out of a fight, else when it ends; a key keeps only the newest) · `Waiting()` → how many are held.
+`AfterFight`/`Waiting` are additive (still version 1) and so far only in CloudeMap's working files:
+check for them before use.
 Pins go through `CloudeMap.RegisterCategory` / `SetPins` (category fields include `minSize`,
 `always`, `absolute`; pin fields include `onEnter(frame, pin)`, `onLeave`, `onClick(pin, btn)`,
 `atlas`, `texture`, `size`). A view point is `ox + cx*scale, oy + cy*scale`, y down.
@@ -105,5 +112,6 @@ with `issecretvalue`.
   journey.
 - **Ask Andy:** should "Other addons" in CloudeMap's Pins list open on click like Pings? (CloudeMap's
   side.)
-- **Released:** 0.1.1 (`Transit.lua` from Shortest Path 1.45.8; checked compatible with it: API 2.7,
-  Navigate's gates, timetable maths, settings and media unchanged). Needs CloudeMap after 0.19.9.
+- **Released:** 0.1.2 (queued Shift+click in a fight; `Transit.lua` from Shortest Path 1.45.8, identical
+  to 1.50.1's; checked compatible with 1.50.1). Needs CloudeMap after 0.19.9; the queue needs a
+  CloudeMap with `Map.AfterFight`.

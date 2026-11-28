@@ -15,7 +15,9 @@ plugin interface).
   zeppelins, portals) in Shortest Path's colours, the walk in the route colour you picked there.
 - **Destination pin:** its tooltip lists each step with its time and the time left.
 - **Shift+click on CloudeMap** plans a journey to that spot. If Shortest Path can't plan it, the
-  chat says why (in combat, journeys turned off in its settings, and so on).
+  chat says why (journeys turned off in its settings, and so on). In a fight, with a CloudeMap that
+  can hold things for the fight's end, the click is queued and the newest one starts its journey
+  when the fight ends.
 - **Transports:** boats, zeppelins, lifts, the Deeprun Tram and portals as pins, on every map and
   at every zoom. Hover a dock to see where it goes, its route, and when it next leaves once
   Shortest Path has seen that ship. The other faction's routes and portals follow Shortest Path's
